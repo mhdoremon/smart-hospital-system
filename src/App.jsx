@@ -22,8 +22,20 @@ import DoctorPortal from './components/doctor/DoctorPortal';
 import LabPortal from './components/lab/LabPortal';
 import PharmacyPortal from './components/pharmacy/PharmacyPortal';
 import StaffAuthGate from './components/common/StaffAuthGate';
+import CitizenAuthModal from './components/common/CitizenAuthModal';
 
 export default function App() {
+  // Citizen SSO User State (Patient / Customer)
+  const [citizenUser, setCitizenUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('citizen_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [isCitizenAuthOpen, setIsCitizenAuthOpen] = useState(false);
+
   // Session State: null = Public Patient Mode | { role: 'DOCTOR' | 'RECEPTIONIST' | 'LAB' | 'PHARMACY' | 'MANAGER', ... }
   const [staffSession, setStaffSession] = useState(() => {
     try {
@@ -186,6 +198,36 @@ export default function App() {
                 {wsConnected ? 'Live Mesh' : 'Connecting...'}
               </div>
 
+              {/* Citizen SSO User Login / Status (When in Citizen Mode) */}
+              {!staffSession && (
+                citizenUser ? (
+                  <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl text-xs text-blue-900 font-semibold">
+                    <User className="w-3.5 h-3.5 text-blue-600" />
+                    <span className="hidden sm:inline">{citizenUser.name}</span>
+                    <span className="text-[11px] text-blue-600 font-mono">({citizenUser.phone})</span>
+                    <button 
+                      onClick={() => {
+                        setCitizenUser(null);
+                        localStorage.removeItem('citizen_token');
+                        localStorage.removeItem('citizen_user');
+                      }}
+                      className="ml-1 text-slate-400 hover:text-rose-600 transition-colors"
+                      title="Sign Out Citizen Profile"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsCitizenAuthOpen(true)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-blue-600/20 transition-all"
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    <span>Citizen Sign In / OTP</span>
+                  </button>
+                )
+              )}
+
               {/* Staff Authentication Gate Button vs Active Staff Lock Button */}
               {!staffSession ? (
                 <button
@@ -193,7 +235,8 @@ export default function App() {
                   className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-sm transition-all hover:shadow"
                 >
                   <Lock className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Clinical Staff Access</span>
+                  <span className="hidden sm:inline">Clinical Staff Access</span>
+                  <span className="sm:hidden">Staff</span>
                 </button>
               ) : (
                 <div className="flex items-center gap-2">
@@ -234,7 +277,12 @@ export default function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
         {!staffSession ? (
           /* Public / Citizen View: ONLY Patient Portal */
-          <PatientPortal sharedState={sharedState} setSharedState={setSharedState} />
+          <PatientPortal 
+            sharedState={sharedState} 
+            setSharedState={setSharedState} 
+            citizenUser={citizenUser}
+            onOpenAuth={() => setIsCitizenAuthOpen(true)}
+          />
         ) : staffSession.role === 'DOCTOR' ? (
           /* Locked Doctor Station */
           <DoctorPortal sharedState={sharedState} setSharedState={setSharedState} />
@@ -254,6 +302,13 @@ export default function App() {
           <div className="p-8 text-center text-slate-500">Unrecognized workstation role.</div>
         )}
       </main>
+
+      {/* Citizen SSO Authentication Modal (MSG91 Phone OTP & Google) */}
+      <CitizenAuthModal 
+        isOpen={isCitizenAuthOpen}
+        onClose={() => setIsCitizenAuthOpen(false)}
+        onAuthenticated={(user) => setCitizenUser(user)}
+      />
 
       {/* Staff Authentication Gate Modal */}
       <StaffAuthGate 

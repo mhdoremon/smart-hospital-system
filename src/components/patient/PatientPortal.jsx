@@ -21,13 +21,20 @@ import {
 } from 'lucide-react';
 import QRDisplay from '../common/QRDisplay';
 
-export default function PatientPortal({ sharedState, setSharedState }) {
+export default function PatientPortal({ sharedState, setSharedState, citizenUser, onOpenAuth }) {
   const [step, setStep] = useState(1);
-  const [patientName, setPatientName] = useState('Rahul Verma');
-  const [phone, setPhone] = useState('9876543210');
+  const [patientName, setPatientName] = useState(citizenUser?.name || 'Rahul Verma');
+  const [phone, setPhone] = useState(citizenUser?.phone ? citizenUser.phone.replace(/\D/g, '').slice(-10) : '9876543210');
   const [complaint, setComplaint] = useState('Fever for 2 days with sore throat and dry cough');
   const [triageLoading, setTriageLoading] = useState(false);
   const [triageResult, setTriageResult] = useState(null);
+
+  useEffect(() => {
+    if (citizenUser) {
+      if (citizenUser.name) setPatientName(citizenUser.name);
+      if (citizenUser.phone) setPhone(citizenUser.phone.replace(/\D/g, '').slice(-10));
+    }
+  }, [citizenUser]);
   
   const [hospitals, setHospitals] = useState([]);
   const [doctors, setDoctors] = useState([]);
@@ -187,6 +194,29 @@ export default function PatientPortal({ sharedState, setSharedState }) {
               <Sparkles className="w-4 h-4 text-blue-600" />
               Patient Details & Symptom Triage
             </h3>
+
+            {citizenUser ? (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Verified Citizen SSO: <strong>{citizenUser.name}</strong> ({citizenUser.phone})</span>
+                </div>
+                <span className="text-[10px] font-bold uppercase bg-emerald-200/60 px-2 py-0.5 rounded text-emerald-900">
+                  MSG91 Verified
+                </span>
+              </div>
+            ) : (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <span>Have a Citizen Account? Sign in via real SMS OTP or Google for auto-fill.</span>
+                <button
+                  type="button"
+                  onClick={onOpenAuth}
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shrink-0 self-start sm:self-auto"
+                >
+                  Sign In / OTP
+                </button>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>

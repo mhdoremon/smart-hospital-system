@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: smart-hospital-system
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    region: singapore
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
